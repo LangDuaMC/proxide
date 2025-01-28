@@ -1,0 +1,4 @@
+name: Proxide
+main: work.stdpi.proxide.bungee.ProxidePlugin
+version: 1.0
+author: stdpi

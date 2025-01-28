@@ -1,0 +1,23 @@
+# Instance identifier
+instance: "default"
+
+# Endpoint configuration
+endpoint:
+  host: "0.0.0.0"
+  port: 25080
+
+# Hooks configuration
+hooks:
+  players:
+    enabled: true
+  network:
+    enabled: true
+
+# Provider configuration
+provider:
+  maxmind:
+    enabled: false
+    id: ""
+    key: ""
+  xcord:
+    enabled: true # if something gone wrong, turn this off
