@@ -4,7 +4,7 @@ import java.io.File
 import java.io.IOException
 import java.nio.file.Files
 
-abstract class AbstractConfig(protected val dataFolder: File) {
+abstract class AbstractConfig(val dataFolder: File) {
     protected lateinit var config: Any // Platform-specific configuration object
     private val configFile: File = File(dataFolder, "config.yml")
 
@@ -13,9 +13,7 @@ abstract class AbstractConfig(protected val dataFolder: File) {
         loadConfig()
     }
 
-    /**
-     * Creates the default configuration file if it doesn't exist.
-     */
+    /** Creates the default configuration file if it doesn't exist. */
     private fun createDefaultConfig() {
         if (!configFile.exists()) {
             try {
@@ -29,24 +27,16 @@ abstract class AbstractConfig(protected val dataFolder: File) {
         }
     }
 
-    /**
-     * Loads the configuration. To be implemented in subclasses.
-     */
+    /** Loads the configuration. To be implemented in subclasses. */
     protected abstract fun loadConfig()
 
-    /**
-     * Retrieves a string value from the configuration with a default fallback.
-     */
+    /** Retrieves a string value from the configuration with a default fallback. */
     protected abstract fun getString(path: String, default: String = ""): String
 
-    /**
-     * Retrieves an integer value from the configuration with a default fallback.
-     */
+    /** Retrieves an integer value from the configuration with a default fallback. */
     protected abstract fun getInt(path: String, default: Int = 0): Int
 
-    /**
-     * Retrieves a boolean value from the configuration with a default fallback.
-     */
+    /** Retrieves a boolean value from the configuration with a default fallback. */
     protected abstract fun getBoolean(path: String, default: Boolean = false): Boolean
 
     abstract val platform: String
@@ -77,4 +67,22 @@ abstract class AbstractConfig(protected val dataFolder: File) {
 
     val providerXCordEnabled: Boolean
         get() = getBoolean("provider.xcord.enabled")
+
+    override fun toString(): String {
+        return "AbstractConfig(platform='$platform', " +
+            "instance='$instance', " +
+            "endpointHost='$endpointHost', " +
+            "endpointPort=$endpointPort, " +
+            "hooksPlayersEnabled=$hooksPlayersEnabled, " +
+            "hooksNetworkEnabled=$hooksNetworkEnabled, " +
+            "providerMaxmindEnabled=$providerMaxmindEnabled, " +
+            "providerMaxmindId='$providerMaxmindId', " +
+            "providerMaxmindKey='${
+                providerMaxmindKey.replace(
+                    Regex("."),
+                    "*",
+                )
+            }', " + // Masking sensitive data
+            "providerXCordEnabled=$providerXCordEnabled)"
+    }
 }

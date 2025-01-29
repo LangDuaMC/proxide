@@ -9,8 +9,9 @@ import okhttp3.OkHttpClient
 import okhttp3.Request
 import org.apache.commons.compress.archivers.tar.TarArchiveInputStream
 import org.apache.commons.compress.compressors.gzip.GzipCompressorInputStream
-import work.stdpi.proxide.core.ExpositionTag
-import work.stdpi.proxide.core.ITags
+import work.stdpi.proxide.core.Core
+import work.stdpi.proxide.core.metric.IMetricTags
+import work.stdpi.proxide.core.metric.MetricTag
 import java.io.BufferedInputStream
 import java.io.File
 import java.io.IOException
@@ -29,20 +30,20 @@ import java.util.concurrent.TimeUnit
 import kotlin.math.pow
 
 class MaxmindProvider(
+    private val core: Core,
     private val accountId: String,
     private val licenseKey: String,
-    private val databaseDir: File = File("maxmind_databases")
+    private val databaseDir: File = core.config.dataFolder.resolve(File("_tmp")),
 ) {
-    private val client = OkHttpClient.Builder()
-        .addInterceptor { chain ->
-            val credential = Credentials.basic(accountId, licenseKey)
-            chain.proceed(
-                chain.request().newBuilder()
-                    .header("Authorization", credential)
-                    .build()
-            )
-        }
-        .build()
+    private val client =
+        OkHttpClient.Builder()
+            .addInterceptor { chain ->
+                val credential = Credentials.basic(accountId, licenseKey)
+                chain.proceed(
+                    chain.request().newBuilder().header("Authorization", credential).build(),
+                )
+            }
+            .build()
 
     private val executor: ScheduledExecutorService = Executors.newScheduledThreadPool(2)
     private var cityReader: DatabaseReader? = null
@@ -67,41 +68,39 @@ class MaxmindProvider(
     fun getLocation(ipAddress: InetAddress) =
         cityReader?.tryQuery<CityResponse>(ipAddress)?.let { MaxmindCityResponse.from(it) }
 
-    fun getAsn(ipAddress: InetAddress) = asnReader?.tryQuery<AsnResponse>(ipAddress)?.let {
-        MaxmindASNResponse.from(it)
-    }
+    fun getAsn(ipAddress: InetAddress) =
+        asnReader?.tryQuery<AsnResponse>(ipAddress)?.let { MaxmindASNResponse.from(it) }
 
     class MaxmindASNResponse(
         val autonomousSystemNumber: Long,
         val autonomousSystemOrganization: String,
-    ) : ITags {
-        override fun toTags(): Iterable<ExpositionTag<*>> = listOf(
-            ExpositionTag("ip_asn", autonomousSystemNumber),
-            ExpositionTag("ip_isp", autonomousSystemOrganization),
-        )
+    ) : IMetricTags {
+        override fun toTags(): Iterable<MetricTag<*>> =
+            listOf(
+                MetricTag("ip_asn", autonomousSystemNumber),
+                MetricTag("ip_isp", autonomousSystemOrganization),
+            )
 
         companion object {
             fun from(r: AsnResponse): MaxmindASNResponse {
-                return MaxmindASNResponse(
-                    r.autonomousSystemNumber,
-                    r.autonomousSystemOrganization,
-                )
+                return MaxmindASNResponse(r.autonomousSystemNumber, r.autonomousSystemOrganization)
             }
         }
     }
 
     class MaxmindCityResponse(
-        val cityName: String?,       // City name in English
+        val cityName: String?, // City name in English
         val countryIsoCode: String?, // Country ISO code (e.g., "US")
-        val latitude: Double?,       // Latitude of the location
-        val longitude: Double?,      // Longitude of the location
-    ) : ITags {
-        override fun toTags(): Iterable<ExpositionTag<*>> = listOf(
-            ExpositionTag("ip_country", countryIsoCode),
-            ExpositionTag("ip_city", cityName),
-            ExpositionTag("ip_lat", latitude),
-            ExpositionTag("ip_long", longitude)
-        )
+        val latitude: Double?, // Latitude of the location
+        val longitude: Double?, // Longitude of the location
+    ) : IMetricTags {
+        override fun toTags(): Iterable<MetricTag<*>> =
+            listOf(
+                MetricTag("ip_country", countryIsoCode),
+                MetricTag("ip_city", cityName),
+                MetricTag("ip_lat", latitude),
+                MetricTag("ip_long", longitude),
+            )
 
         companion object {
             fun from(r: CityResponse): MaxmindCityResponse {
@@ -116,6 +115,12 @@ class MaxmindProvider(
     }
 
     private fun loadExistingDatabases() {
+        if (!cityDatabaseFile.exists()) {
+            updateCity()
+        }
+        if (!asnDatabaseFile.exists()) {
+            updateAsn()
+        }
         cityReader = tryCreateReader(cityDatabaseFile)
         asnReader = tryCreateReader(asnDatabaseFile)
     }
@@ -128,24 +133,42 @@ class MaxmindProvider(
         }
     }
 
+    fun updateCity() {
+        core.logger.info("Pulling Maxmind's City Database")
+        tryUpdateDatabase(
+            databaseFile = cityDatabaseFile,
+            downloadUrl =
+            "https://download.maxmind.com/geoip/databases/GeoLite2-City/download?suffix=tar.gz",
+            type = "City",
+        )
+    }
+
+    fun updateAsn() {
+        core.logger.info("Pulling Maxmind's ASN Database")
+        tryUpdateDatabase(
+            databaseFile = asnDatabaseFile,
+            downloadUrl =
+            "https://download.maxmind.com/geoip/databases/GeoLite2-ASN/download?suffix=tar.gz",
+            type = "ASN",
+        )
+    }
+
     private fun scheduleCityUpdates() {
-        executor.scheduleWithFixedDelay({
-            tryUpdateDatabase(
-                databaseFile = cityDatabaseFile,
-                downloadUrl = "https://download.maxmind.com/geoip/databases/GeoLite2-City/download?suffix=tar.gz",
-                type = "City"
-            )
-        }, calculateCityInitialDelay(), 7, TimeUnit.DAYS)
+        executor.scheduleWithFixedDelay(
+            { updateCity() },
+            calculateCityInitialDelay(),
+            7,
+            TimeUnit.DAYS,
+        )
     }
 
     private fun scheduleAsnUpdates() {
-        executor.scheduleAtFixedRate({
-            tryUpdateDatabase(
-                databaseFile = asnDatabaseFile,
-                downloadUrl = "https://download.maxmind.com/geoip/databases/GeoLite2-ASN/download?suffix=tar.gz",
-                type = "ASN"
-            )
-        }, calculateAsnInitialDelay(), 1, TimeUnit.DAYS)
+        executor.scheduleAtFixedRate(
+            { updateAsn() },
+            calculateAsnInitialDelay(),
+            1,
+            TimeUnit.DAYS,
+        )
     }
 
     private fun calculateCityInitialDelay(): Long {
@@ -156,29 +179,30 @@ class MaxmindProvider(
         val now = ZonedDateTime.now(utcMinus5)
 
         // Determine the next Tuesday or Friday (whichever comes first)
-        val nextDay = if (now.dayOfWeek == DayOfWeek.MONDAY || now.dayOfWeek < DayOfWeek.TUESDAY) {
-            DayOfWeek.TUESDAY
-        } else if (now.dayOfWeek == DayOfWeek.TUESDAY || now.dayOfWeek < DayOfWeek.FRIDAY) {
-            DayOfWeek.FRIDAY
-        } else {
-            DayOfWeek.TUESDAY
-        }
+        val nextDay =
+            if (now.dayOfWeek == DayOfWeek.MONDAY || now.dayOfWeek < DayOfWeek.TUESDAY) {
+                DayOfWeek.TUESDAY
+            } else if (now.dayOfWeek == DayOfWeek.TUESDAY || now.dayOfWeek < DayOfWeek.FRIDAY) {
+                DayOfWeek.FRIDAY
+            } else {
+                DayOfWeek.TUESDAY
+            }
 
         // Find the next Tuesday or Friday 23:59:59 in UTC-5
-        val nextTargetDay = now.with(TemporalAdjusters.next(nextDay))
-            .with(LocalTime.of(23, 59, 59))
+        val nextTargetDay = now.with(TemporalAdjusters.next(nextDay)).with(LocalTime.of(23, 59, 59))
 
         // Convert to UTC+8 and calculate target time (3 AM next day in UTC+8)
-        val targetTime = nextTargetDay.withZoneSameInstant(utcPlus8)
-            .plusDays(1)
-            .withHour(3)
-            .withMinute(0)
-            .withSecond(0)
+        val targetTime =
+            nextTargetDay
+                .withZoneSameInstant(utcPlus8)
+                .plusDays(1)
+                .withHour(3)
+                .withMinute(0)
+                .withSecond(0)
 
         // Return the delay in milliseconds
         return Duration.between(Instant.now(), targetTime.toInstant()).toMillis()
     }
-
 
     private fun calculateAsnInitialDelay(): Long {
         val zonePlus8 = ZoneId.of("UTC+08:00")
@@ -224,9 +248,7 @@ class MaxmindProvider(
         client.newCall(request).execute().use { response ->
             if (!response.isSuccessful) throw IOException("Unexpected code $response")
             response.body?.byteStream()?.use { input ->
-                destination.outputStream().use { output ->
-                    input.copyTo(output)
-                }
+                destination.outputStream().use { output -> input.copyTo(output) }
             }
         }
     }
@@ -240,9 +262,7 @@ class MaxmindProvider(
                         .firstOrNull()
                         ?.let {
                             val outputFile = File(destDir, it.name.substringAfterLast('/'))
-                            outputFile.outputStream().use { out ->
-                                tar.copyTo(out)
-                            }
+                            outputFile.outputStream().use { out -> tar.copyTo(out) }
                             return outputFile
                         } ?: throw IOException("No .mmdb file found")
                 }

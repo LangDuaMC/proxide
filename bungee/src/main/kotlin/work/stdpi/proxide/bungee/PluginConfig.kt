@@ -1,17 +1,18 @@
 package work.stdpi.proxide.bungee
 
+import java.io.File
+import java.io.IOException
 import net.md_5.bungee.config.Configuration
 import net.md_5.bungee.config.ConfigurationProvider
 import net.md_5.bungee.config.YamlConfiguration
 import work.stdpi.proxide.core.AbstractConfig
-import java.io.File
-import java.io.IOException
 
 class PluginConfig(dataFolder: File) : AbstractConfig(dataFolder) {
     override fun loadConfig() {
         try {
             config =
-                ConfigurationProvider.getProvider(YamlConfiguration::class.java).load(File(dataFolder, "config.yml"))
+                ConfigurationProvider.getProvider(YamlConfiguration::class.java)
+                    .load(File(dataFolder, "config.yml"))
         } catch (e: IOException) {
             e.printStackTrace()
         }
