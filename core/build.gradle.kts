@@ -6,9 +6,13 @@ plugins {
   kotlin("jvm") version "2.1.0"
   id("io.ktor.plugin") version "3.0.3"
   id("com.ncorti.ktfmt.gradle") version "0.21.0"
+    id("com.github.gmazzo.buildconfig")
 }
 
 repositories { mavenCentral() }
+
+group = "work.stdpi.proxide"
+version = "1.0.2"
 
 dependencies {
   implementation("io.ktor:ktor-server-core")
@@ -29,4 +33,25 @@ tasks.named("shadowJar") { enabled = false }
 
 ktfmt {
   kotlinLangStyle()
+}
+
+tasks.shadowJar {
+    enabled = false
+}
+
+tasks.generateBuildConfig {
+    enabled = true
+}
+
+buildConfig {
+    className("BuildMetadata")
+    packageName("work.stdpi.proxide")
+
+    buildConfigField("String", "VERSION", "\"${project.version}\"")
+    useJavaOutput()
+    useKotlinOutput()
+    useKotlinOutput {
+        topLevelConstants = true
+    }
+    useKotlinOutput { internalVisibility = false }
 }

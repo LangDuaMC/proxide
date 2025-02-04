@@ -57,7 +57,7 @@ class MetricEndpoint(
                             buildString {
                                 append(this@MetricEndpoint.registry.scrape())
                                 append(hookRegistry.dyRenderHooks())
-                            },
+                            }
                         )
                     }
                 }
@@ -67,7 +67,7 @@ class MetricEndpoint(
     }
 
     fun onDisable() {
-        server?.stop()
+        server?.stop(1000L, 1000L)
     }
 
     object PromConfig : PrometheusConfig {

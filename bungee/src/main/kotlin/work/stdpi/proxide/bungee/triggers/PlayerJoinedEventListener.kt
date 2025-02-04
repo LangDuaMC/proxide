@@ -5,7 +5,7 @@ import net.md_5.bungee.api.plugin.Listener
 import net.md_5.bungee.event.EventHandler
 import work.stdpi.proxide.core.trigger.AbstractTrigger
 
-class PlayerJoinedEventListener: AbstractTrigger(), Listener {
+class PlayerJoinedEventListener : AbstractTrigger(), Listener {
     override var name = "player_logins"
 
     @EventHandler
@@ -13,4 +13,3 @@ class PlayerJoinedEventListener: AbstractTrigger(), Listener {
         onEvent()
     }
 }
-

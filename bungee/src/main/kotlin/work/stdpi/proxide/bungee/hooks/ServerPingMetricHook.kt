@@ -1,6 +1,5 @@
 package work.stdpi.proxide.bungee.hooks
 
-import java.io.IOException
 import java.net.Socket
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.TimeUnit
@@ -33,11 +32,8 @@ class ServerPingMetricHook(private val plugin: ProxidePlugin) : IMetricHook {
                             val latency = (System.nanoTime() - startTime) * 1e-6
                             latencyCache[server.name] = latency
                         }
-                    } catch (e: IOException) {
-                        latencyCache[server.name] = -1.0
                     } catch (e: Exception) {
-                        // Handle other potential exceptions
-                        latencyCache[server.name] = -2.0
+                        latencyCache[server.name] = -1.0
                     }
                 },
             )
@@ -53,6 +49,11 @@ class ServerPingMetricHook(private val plugin: ProxidePlugin) : IMetricHook {
                 3L,
                 TimeUnit.SECONDS, // Initial delay 1s, repeat every 3s
             )
+    }
+
+    fun onDisable() {
+        pingTask?.cancel()
+        pingTask = null
     }
 
     override fun collect() =

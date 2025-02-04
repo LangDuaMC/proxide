@@ -1,11 +1,11 @@
 package work.stdpi.proxide.core
 
 import io.micrometer.core.instrument.Tag
+import java.util.logging.Logger
 import work.stdpi.proxide.core.intelligence.MaxmindProvider
 import work.stdpi.proxide.core.metric.IMetricHook
 import work.stdpi.proxide.core.metric.MetricEndpoint
 import work.stdpi.proxide.core.metric.MetricHookRegistry
-import java.util.logging.Logger
 
 class Core(val config: AbstractConfig, val logger: Logger) {
     var globalTags: List<Tag>? = null

@@ -31,12 +31,20 @@ class ConnectedPlayerMetricHookGroup(val plugin: ProxidePlugin) : IMetricHook {
                     mutableListOf<MetricTag<*>>(
                         MetricTag("uuid", it.uniqueId),
                         MetricTag("player", it.name),
+                        MetricTag("server", it.server.info.name),
                         MetricTag("ip", address),
                     )
                 if (plugin.config.providerMaxmindEnabled && plugin.core.maxmind != null) {
-                    val asn = plugin.core.maxmind?.getAsn(address)
-                    val city = plugin.core.maxmind?.getLocation(address)
-                    tags.add(MetricTag("asn", ""))
+                    plugin.core.maxmind?.getAsn(address)?.let { asn ->
+                        tags.add(MetricTag("asn", asn.autonomousSystemNumber))
+                        tags.add(MetricTag("isp", asn.autonomousSystemOrganization))
+                    }
+                    plugin.core.maxmind?.getLocation(address)?.let { city ->
+                        tags.add(MetricTag("country", city.countryIsoCode))
+                        tags.add(MetricTag("city", city.cityName))
+                        tags.add(MetricTag("latitude", city.latitude))
+                        tags.add(MetricTag("longitude", city.longitude))
+                    }
                 }
                 Pair(it, tags)
             }

@@ -5,10 +5,11 @@ import work.stdpi.proxide.bungee.ProxidePlugin
 import work.stdpi.proxide.core.trigger.AbstractTrigger
 import work.stdpi.proxide.core.trigger.AbstractTriggerManager
 
-class TriggerManager(private val plugin: ProxidePlugin) :
-    AbstractTriggerManager(plugin.core) {
+class TriggerManager(private val plugin: ProxidePlugin) : AbstractTriggerManager(plugin.core) {
+    private var isLogging = false
 
     fun onEnable() {
+        register(GenericEventListener())
         register(LoginEventListener())
         register(PlayerChatEventListener())
         register(PlayerCommandEventListener())
@@ -18,9 +19,15 @@ class TriggerManager(private val plugin: ProxidePlugin) :
     }
 
     override fun register(it: AbstractTrigger) {
-        super.register(it)
         if (it is Listener) {
             plugin.proxy.pluginManager.registerListener(plugin, it)
         }
+        super.register(it)
+    }
+
+    fun setLogging(): Boolean {
+        isLogging = !isLogging
+        triggers.forEach { it.logger = if (isLogging) plugin.logger else null }
+        return isLogging
     }
 }

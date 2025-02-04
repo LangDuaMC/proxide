@@ -19,26 +19,31 @@ class MetricHookRegistry(val core: Core, val globalTags: List<Tag>?) {
 
         hooks.forEach { hook ->
             hook.collect().forEach { hook ->
-                sb.append("# HELP ").append(prefix + hook.name).append(' ').append(hook.description)
+                sb.append("# HELP ")
+                    .append(prefix + hook.name)
+                    .append(' ')
+                    .append(hook.description)
                     .append('\n') //
-                    .append("# TYPE ").append(prefix + hook.name).append(' ').append(hook.type)
+                    .append("# TYPE ")
+                    .append(prefix + hook.name)
+                    .append(' ')
+                    .append(hook.type)
                     .append('\n')
 
                 hook.data.forEach { entry ->
                     val seriesIdentifier = buildString {
                         append(prefix + hook.name)
                         if (entry.metricTags.isNotEmpty()) {
-                            append('{').append(
-                                (renderedGlobalTags + entry.metricTags).joinToString(
-                                    ",",
-                                ),
-                            )
+                            append('{')
+                                .append((renderedGlobalTags + entry.metricTags).joinToString(","))
                                 .append('}')
                         }
                     }
 
                     if (uniqueSeries.add(seriesIdentifier)) {
-                        sb.append(seriesIdentifier).append(' ').append(entry.value.toString())
+                        sb.append(seriesIdentifier)
+                            .append(' ')
+                            .append(entry.value.toString())
                             .append('\n')
                     }
                 }

@@ -4,14 +4,6 @@ import com.maxmind.db.CHMCache
 import com.maxmind.geoip2.DatabaseReader
 import com.maxmind.geoip2.model.AsnResponse
 import com.maxmind.geoip2.model.CityResponse
-import okhttp3.Credentials
-import okhttp3.OkHttpClient
-import okhttp3.Request
-import org.apache.commons.compress.archivers.tar.TarArchiveInputStream
-import org.apache.commons.compress.compressors.gzip.GzipCompressorInputStream
-import work.stdpi.proxide.core.Core
-import work.stdpi.proxide.core.metric.IMetricTags
-import work.stdpi.proxide.core.metric.MetricTag
 import java.io.BufferedInputStream
 import java.io.File
 import java.io.IOException
@@ -28,6 +20,14 @@ import java.util.concurrent.Executors
 import java.util.concurrent.ScheduledExecutorService
 import java.util.concurrent.TimeUnit
 import kotlin.math.pow
+import okhttp3.Credentials
+import okhttp3.OkHttpClient
+import okhttp3.Request
+import org.apache.commons.compress.archivers.tar.TarArchiveInputStream
+import org.apache.commons.compress.compressors.gzip.GzipCompressorInputStream
+import work.stdpi.proxide.core.Core
+import work.stdpi.proxide.core.metric.IMetricTags
+import work.stdpi.proxide.core.metric.MetricTag
 
 class MaxmindProvider(
     private val core: Core,
@@ -40,7 +40,7 @@ class MaxmindProvider(
             .addInterceptor { chain ->
                 val credential = Credentials.basic(accountId, licenseKey)
                 chain.proceed(
-                    chain.request().newBuilder().header("Authorization", credential).build(),
+                    chain.request().newBuilder().header("Authorization", credential).build()
                 )
             }
             .build()
@@ -138,7 +138,7 @@ class MaxmindProvider(
         tryUpdateDatabase(
             databaseFile = cityDatabaseFile,
             downloadUrl =
-            "https://download.maxmind.com/geoip/databases/GeoLite2-City/download?suffix=tar.gz",
+                "https://download.maxmind.com/geoip/databases/GeoLite2-City/download?suffix=tar.gz",
             type = "City",
         )
     }
@@ -148,7 +148,7 @@ class MaxmindProvider(
         tryUpdateDatabase(
             databaseFile = asnDatabaseFile,
             downloadUrl =
-            "https://download.maxmind.com/geoip/databases/GeoLite2-ASN/download?suffix=tar.gz",
+                "https://download.maxmind.com/geoip/databases/GeoLite2-ASN/download?suffix=tar.gz",
             type = "ASN",
         )
     }
@@ -163,12 +163,7 @@ class MaxmindProvider(
     }
 
     private fun scheduleAsnUpdates() {
-        executor.scheduleAtFixedRate(
-            { updateAsn() },
-            calculateAsnInitialDelay(),
-            1,
-            TimeUnit.DAYS,
-        )
+        executor.scheduleAtFixedRate({ updateAsn() }, calculateAsnInitialDelay(), 1, TimeUnit.DAYS)
     }
 
     private fun calculateCityInitialDelay(): Long {
