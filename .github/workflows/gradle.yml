@@ -32,7 +32,7 @@ jobs:
       uses: gradle/actions/setup-gradle@v3 # v3.1.0
 
     - name: Build with Gradle Wrapper
-      run: ./gradlew ktlintFormat build
+      run: ./gradlew clean build
 
   dependency-submission:
 
